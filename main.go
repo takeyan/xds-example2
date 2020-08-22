@@ -57,7 +57,14 @@ func init() {
         flag.StringVar(&nodeID, "nodeID", "test-id", "Node ID")
 }
 
+
 func main() {
+	xds()
+}
+
+
+
+func xds() {
         flag.Parse()
 
         // Create a cache
