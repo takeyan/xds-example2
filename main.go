@@ -14,90 +14,80 @@
 package main
 
 import (
-//	"reflect"
-	"context"
-	"flag"
-	"os"
-//	"time"
-	"fmt"
-	"net/http"      // HTTP Server
-//	"strings"      // HTTP Server
+        "context"
+        "flag"
+        "os"
+        "fmt"
+        "net/http"      // HTTP Server
 
-	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	testv3 "github.com/envoyproxy/go-control-plane/pkg/test/v3"
+        cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+        serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+        testv3 "github.com/envoyproxy/go-control-plane/pkg/test/v3"
 
         example "bg-deploy/pkg/xdshelper"
-	"github.com/google/uuid"
+        "github.com/google/uuid"
 )
 
 var (
-	l example.Logger
+        l example.Logger
 
-	port     uint
-	basePort uint
-	mode     string
+        port     uint
+        basePort uint
+        mode     string
 
-	nodeID string
+        nodeID string
 
         upstreamHostname string = "www.ibm.com"
         snapshotVersion string = "1"
 
         cache cachev3.SnapshotCache
-//	ctx context.EmptyCtx
-	cb *testv3.Callbacks
-//	cb int32
-	srv serverv3.Server
-	snapshot cachev3.Snapshot
-
+        snapshot cachev3.Snapshot
 
 )
 
 func init() {
-	l = example.Logger{}
+        l = example.Logger{}
 
-	flag.BoolVar(&l.Debug, "debug", false, "Enable xDS server debug logging")
+        flag.BoolVar(&l.Debug, "debug", false, "Enable xDS server debug logging")
 
-	// The port that this xDS server listens on
-	flag.UintVar(&port, "port", 18000, "xDS management server port")
+        // The port that this xDS server listens on
+        flag.UintVar(&port, "port", 18000, "xDS management server port")
 
-	// Tell Envoy to use this Node ID
-	flag.StringVar(&nodeID, "nodeID", "test-id", "Node ID")
+        // Tell Envoy to use this Node ID
+        flag.StringVar(&nodeID, "nodeID", "test-id", "Node ID")
 }
 
 func main() {
-	flag.Parse()
+        flag.Parse()
 
-	// Create a cache
-	cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, l)
+        // Create a cache
+        cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, l)
 
-	// Create the snapshot that we'll serve to Envoy
-	snapshot = example.GenerateSnapshot2(upstreamHostname, snapshotVersion)
-	if err := snapshot.Consistent(); err != nil {
-		l.Errorf("snapshot inconsistency: %+v\n%+v", snapshot, err)
-		os.Exit(1)
-	}
-	l.Debugf("will serve snapshot %+v", snapshot)
+        // Create the snapshot that we'll serve to Envoy
+        snapshot = example.GenerateSnapshot2(upstreamHostname, snapshotVersion)
+        if err := snapshot.Consistent(); err != nil {
+                l.Errorf("snapshot inconsistency: %+v\n%+v", snapshot, err)
+                os.Exit(1)
+        }
+        l.Debugf("will serve snapshot %+v", snapshot)
 
-	// Add the snapshot to the cache
-	if err := cache.SetSnapshot(nodeID, snapshot); err != nil {
-		l.Errorf("snapshot error %q for %+v", err, snapshot)
-		os.Exit(1)
-	}
+        // Add the snapshot to the cache
+        if err := cache.SetSnapshot(nodeID, snapshot); err != nil {
+                l.Errorf("snapshot error %q for %+v", err, snapshot)
+                os.Exit(1)
+        }
 
 
-
-	// Run HTTP server to switch the target host
+        // Run HTTP server to switch the target host
         http.HandleFunc("/xds", changeHost)
         go http.ListenAndServe(":18080", nil)
 
 
-
-	// Run the xDS server
-	ctx := context.Background()
-	cb = &testv3.Callbacks{Debug: l.Debug}
-	srv = serverv3.NewServer(ctx, cache, cb)
-	example.RunServer(ctx, srv, port)
+        // Run the xDS server
+        ctx := context.Background()
+        cb := &testv3.Callbacks{Debug: l.Debug}
+        srv := serverv3.NewServer(ctx, cache, cb)
+        example.RunServer(ctx, srv, port)
 
 }
 
@@ -112,3 +102,4 @@ func changeHost(w http.ResponseWriter, r *http.Request) {
     cache.SetSnapshot(nodeID, snapshot)
 
 }
+
