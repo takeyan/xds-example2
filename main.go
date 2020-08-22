@@ -71,7 +71,7 @@ func xds() {
         cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, l)
 
         // Create the snapshot that we'll serve to Envoy
-        snapshot = example.GenerateSnapshot2(upstreamHostname, snapshotVersion)
+        snapshot = example.GenerateSnapshot2(upstreamHostname, "80", snapshotVersion)
         if err := snapshot.Consistent(); err != nil {
                 l.Errorf("snapshot inconsistency: %+v\n%+v", snapshot, err)
                 os.Exit(1)
@@ -102,10 +102,11 @@ func xds() {
 func changeHost(w http.ResponseWriter, r *http.Request) {
 
     host := r.URL.Query().Get("host")
-    fmt.Fprint(w, "Change the target server to " , host, "\n")
+    port := r.URL.Query().Get("port")
+    fmt.Fprint(w, "Change the target server to " , host, port, "\n")
 
     u,_ := uuid.NewRandom()
-    snapshot = example.GenerateSnapshot2(host, u.String())
+    snapshot = example.GenerateSnapshot2(host, port, u.String())
     cache.SetSnapshot(nodeID, snapshot)
 
 }

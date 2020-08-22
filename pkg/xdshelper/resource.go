@@ -15,6 +15,7 @@ package example
 
 import (
 	"time"
+	"strconv"
 
 	"github.com/golang/protobuf/ptypes"
 
@@ -176,19 +177,19 @@ func GenerateSnapshot() cache.Snapshot {
 	)
 }
 
-func makeCluster2(clusterName string, upstreamHostname string) *cluster.Cluster {
+func makeCluster2(clusterName string, upstreamHostname string, upstreamPortnumber uint32) *cluster.Cluster {
     return &cluster.Cluster{
         Name:                 clusterName,
         ConnectTimeout:       ptypes.DurationProto(5 * time.Second),
         ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_LOGICAL_DNS},
         DnsLookupFamily:      cluster.Cluster_V4_ONLY,
         LbPolicy:             cluster.Cluster_ROUND_ROBIN,
-        LoadAssignment:       makeEndpoint2(clusterName, upstreamHostname),
+        LoadAssignment:       makeEndpoint2(clusterName, upstreamHostname, upstreamPortnumber),
     }
 }
 
 
-func makeEndpoint2(clusterName string, upstreamHostname string) *endpoint.ClusterLoadAssignment {
+func makeEndpoint2(clusterName string, upstreamHostname string, upstreamPortnumber uint32) *endpoint.ClusterLoadAssignment {
     return &endpoint.ClusterLoadAssignment{
         ClusterName: clusterName,
         Endpoints: []*endpoint.LocalityLbEndpoints{{
@@ -201,7 +202,7 @@ func makeEndpoint2(clusterName string, upstreamHostname string) *endpoint.Cluste
                                     Protocol: core.SocketAddress_TCP,
                                     Address:  upstreamHostname,
                                     PortSpecifier: &core.SocketAddress_PortValue{
-                                        PortValue: UpstreamPort,
+                                        PortValue: upstreamPortnumber,
                                     },
                                 },
                             },
@@ -244,11 +245,13 @@ func makeRoute2(routeName string, clusterName string, upstreamHostname string) *
 
 
 
-func GenerateSnapshot2(upstreamHostname string, snapshotVersion string) cache.Snapshot {
+func GenerateSnapshot2(upstreamHostname string, upstreamPortnumber string, snapshotVersion string) cache.Snapshot {
+    var upstreamPortUint32 uint64
+    upstreamPortUint32,_ = strconv.ParseUint(upstreamPortnumber,10,32)
     return cache.NewSnapshot(
         snapshotVersion,
         []types.Resource{}, // endpoints
-        []types.Resource{makeCluster2(ClusterName, upstreamHostname)},
+        []types.Resource{makeCluster2(ClusterName, upstreamHostname, uint32(upstreamPortUint32))},
         []types.Resource{makeRoute2(RouteName, ClusterName, upstreamHostname)},
         []types.Resource{makeHTTPListener(ListenerName, RouteName)},
         []types.Resource{}, // runtimes
